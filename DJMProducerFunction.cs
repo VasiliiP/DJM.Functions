@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -12,24 +14,19 @@ namespace DJM.Functions
 {
     public static class DJMProducerFunction
     {
-        [FunctionName("DJMProducerFunction")]
+        [FunctionName("ClaimAuthorized")]
+       // [return: ServiceBus("claimauthorized", Connection = "ServiceBusConnection")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
+            [ServiceBus("claimauthorized", Connection = "ServiceBusConnection")] ServiceBusSender  sender,
             ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-
-            string name = req.Query["name"];
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
-
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
-
-            return new OkObjectResult(responseMessage);
+            var message = new ServiceBusMessage(requestBody);
+            await sender.ScheduleMessageAsync(message, DateTimeOffset.UtcNow.AddDays(14));
+            return new OkObjectResult("message sent");
         }
     }
 }
