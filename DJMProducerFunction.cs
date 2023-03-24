@@ -15,7 +15,6 @@ namespace DJM.Functions
     public static class DJMProducerFunction
     {
         [FunctionName("ClaimAuthorized")]
-       // [return: ServiceBus("claimauthorized", Connection = "ServiceBusConnection")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
             [ServiceBus("claimauthorized", Connection = "ServiceBusConnection")] ServiceBusSender  sender,
@@ -23,7 +22,6 @@ namespace DJM.Functions
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
             var message = new ServiceBusMessage(requestBody);
             await sender.ScheduleMessageAsync(message, DateTimeOffset.UtcNow.AddDays(14));
             return new OkObjectResult("message sent");
